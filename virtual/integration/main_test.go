@@ -199,7 +199,12 @@ func NewServer(
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, IncomingPubSub, ClientBus)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	contractRequester, err := contractrequester.New()
+	contractRequester, err := contractrequester.New(
+		ClientBus,
+		Pulses,
+		Coordinator,
+		CryptoScheme,
+	)
 	checkError(ctx, err, "failed to start ContractRequester")
 
 	// TODO: remove this hack in INS-3341
@@ -296,10 +301,10 @@ func NewServer(
 		ctx, wmLogger, IncomingPubSub, ClientBus,
 		outHandler,
 		logicRunner.FlowDispatcher.Process,
-		contractRequester.ReceiveResult,
+		contractRequester.FlowDispatcher.Process,
 	)
 
-	PulseManager.FlowDispatcher = logicRunner.FlowDispatcher
+	PulseManager.AddDispatcher(logicRunner.FlowDispatcher, contractRequester.FlowDispatcher)
 
 	inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"light":   light.ID().String(),
