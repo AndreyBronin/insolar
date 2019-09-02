@@ -28,7 +28,8 @@ import (
 )
 
 const (
-	observerUrl    = "https://wallet-api.qa-wallet.k8s-dev.insolar.io"
+	//observerUrl    = "http://wallet-api.qa-wallet.k8s-dev.insolar.io"
+	ObserverUrl    = "http://wallet-api.qa-gamma.k8s-dev.insolar.io"
 	JSONRPCVersion = "2.0"
 )
 
@@ -37,7 +38,7 @@ var observerInformationApi = GetObserverClient().InformationApi
 
 func GetObserverClient() *insolar_observer_api.APIClient {
 	c := insolar_observer_api.Configuration{
-		BasePath: observerUrl,
+		BasePath: ObserverUrl,
 	}
 	return insolar_observer_api.NewAPIClient(&c)
 }
@@ -95,7 +96,6 @@ func TransactionList(t *testing.T, reference string) []insolar_observer_api.Inli
 	apilogger.Println("reference = " + reference)
 	response, http, err := observerObserverApi.TransactionList(nil, reference)
 	apilogger.LogApiResponse(http, response)
-	//apilogger.Println(  "Err="+err.Error())
 	require.Nil(t, err)
 	//apihelper.CheckResponseHasNoError(t, response) //todo not allowed, because array in response
 	return response

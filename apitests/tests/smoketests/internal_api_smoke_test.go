@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// +build smoke
 // +build apitests
 
 package smoketests
@@ -80,6 +79,13 @@ func TestMigrationActivateDaemon(t *testing.T) {
 	require.Empty(t, response.Error)
 }
 
+func TestMigrationCheckDaemon(t *testing.T) {
+	info := internalapi.GetInfo(t)
+	response := internalapi.MigrationCheckDaemon(t, info.Result.MigrationAdminMember, info.Result.MigrationDaemonMembers[0])
+	require.NotEmpty(t, response.Result)
+	require.Empty(t, response.Error)
+}
+
 func TestGetStatus(t *testing.T) {
 	response := internalapi.GetStatus(t)
 	require.Equal(t, "CompleteNetworkState", response.NetworkState)
@@ -90,7 +96,7 @@ func TestGetStatus(t *testing.T) {
 	}
 	require.Equal(t, false, response.Origin.IsWorking) //bug https://insolar.atlassian.net/browse/INS-3213
 	require.NotEmpty(t, response.PulseNumber)
-	require.NotEmpty(t, response.Version)
+	require.NotEmpty(t, response.Version) //bug https://insolar.atlassian.net/browse/INS-3404
 }
 
 func TestGetInfo(t *testing.T) {

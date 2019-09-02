@@ -31,6 +31,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"reflect"
 	"testing"
 
@@ -79,7 +80,52 @@ func NewMemberSignature() (MemberSignature, error) {
 		PrivateKey:    privateKey,
 		X509PublicKey: x509PublicKey,
 		PemPublicKey:  pemPublicKey,
-	}, err
+	}, nil
+}
+
+func encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (string, string) {
+	x509Encoded, _ := x509.MarshalECPrivateKey(privateKey)
+	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
+
+	x509EncodedPub, _ := x509.MarshalPKIXPublicKey(publicKey)
+	pemEncodedPub := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: x509EncodedPub})
+
+	return string(pemEncoded), string(pemEncodedPub)
+}
+
+func decode(pemEncoded string, pemEncodedPub string) (*ecdsa.PrivateKey, *ecdsa.PublicKey) {
+	block, _ := pem.Decode([]byte(pemEncoded))
+	x509Encoded := block.Bytes
+	privateKey, _ := x509.ParseECPrivateKey(x509Encoded)
+
+	blockPub, _ := pem.Decode([]byte(pemEncodedPub))
+	x509EncodedPub := blockPub.Bytes
+	genericPublicKey, _ := x509.ParsePKIXPublicKey(x509EncodedPub)
+	publicKey := genericPublicKey.(*ecdsa.PublicKey)
+
+	return privateKey, publicKey
+}
+
+// create the MemberSignature from encoded private key and public key
+// Usage:
+//     privateKey, publicKey := apihelper.LoadAdminMemberKeys()
+//     signature, err := apihelper.CreateMemberSignature(publicKey, privateKey)
+//
+func CreateMemberSignature(public_key string, private_key string) (MemberSignature, error) {
+	privateKey, publicKey := decode(private_key, public_key)
+
+	x509PublicKey, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		return MemberSignature{}, err
+	}
+	pemPublicKey := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: x509PublicKey})
+
+	return MemberSignature{
+		PublicKey:     *publicKey,
+		PrivateKey:    privateKey,
+		X509PublicKey: x509PublicKey,
+		PemPublicKey:  pemPublicKey,
+	}, nil
 }
 
 func Sign(payload interface{}, privateKey *ecdsa.PrivateKey) (string, string, map[string]string) {
@@ -129,7 +175,9 @@ func Sign(payload interface{}, privateKey *ecdsa.PrivateKey) (string, string, ma
 }
 
 func LoadAdminMemberKeys() (string, string) {
-	text, err := ioutil.ReadFile("~/go/src/github.com/insolar/insolar/.artifacts/launchnet/configs/migration_admin_member_keys.json")
+	gopath := os.Getenv("GOPATH")
+
+	text, err := ioutil.ReadFile(gopath + "/src/github.com/insolar/insolar/.artifacts/launchnet/configs/migration_admin_member_keys.json")
 	if err != nil {
 		errors.Wrapf(err, "[ loadMemberKeys ] could't load member keys")
 	}

@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// +build smoke
 // +build apitests
 
 package smoketests
@@ -31,7 +30,7 @@ import (
 )
 
 func TestNotification(t *testing.T) {
-	response := observerapi.Notification(t) //todo не понятно как работает
+	response := observerapi.Notification(t) //todo how this working?
 	require.NotEmpty(t, response.Notification)
 }
 
