@@ -61,7 +61,7 @@ func TestObserverGetMigrationAddresses(t *testing.T) { //https://insolar.atlassi
 func TestMemberGetBalance(t *testing.T) {
 	member := insolarapi.CreateMember(t)
 	response := internalapi.GetBalance(t, member)
-	//require.NotEmpty(t, response.Result.CallResult.Deposits)
+	require.Empty(t, response.Result.CallResult.Deposits)
 	require.NotEmpty(t, response.Result.CallResult.Balance)
 	require.NotEmpty(t, response.Result.RequestReference)
 	require.NotEmpty(t, response.Result.TraceID)

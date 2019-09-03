@@ -229,7 +229,6 @@ func GetBalance(t *testing.T, member insolarapi.MemberObject) insolar_internal_a
 	apilogger.LogApiRequest(body.Params.CallSite, body, m)
 	response, http, err := internalMemberApi.GetBalance(nil, d, s, body)
 	apilogger.LogApiResponse(http, response)
-	apilogger.Println(string(err.Error()))
 	require.Nil(t, err.Error())
 
 	require.NotEmpty(t, response.Result.CallResult.Balance)

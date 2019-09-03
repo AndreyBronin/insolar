@@ -28,8 +28,8 @@ import (
 )
 
 const (
-	//observerUrl    = "http://wallet-api.qa-wallet.k8s-dev.insolar.io"
-	ObserverUrl    = "http://wallet-api.qa-gamma.k8s-dev.insolar.io"
+	ObserverUrl = "http://wallet-api.qa-wallet.k8s-dev.insolar.io"
+	//ObserverUrl    = "http://wallet-front.qa-gamma.k8s-dev.insolar.io"
 	JSONRPCVersion = "2.0"
 )
 
@@ -91,6 +91,7 @@ func Transaction(t *testing.T, txId string) insolar_observer_api.TransactionResp
 	apihelper.CheckResponseHasNoError(t, response)
 	return response
 }
+
 func TransactionList(t *testing.T, reference string) []insolar_observer_api.InlineResponse200 {
 	apilogger.LogApiRequest("get /api/transactionList", nil, nil)
 	apilogger.Println("reference = " + reference)

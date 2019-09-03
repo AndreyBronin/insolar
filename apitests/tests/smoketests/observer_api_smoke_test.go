@@ -45,8 +45,8 @@ func TestObserverSmoke(t *testing.T) {
 	apilogger.Println("Transfer OK. Fee: " + fee)
 	require.NotEmpty(t, fee, "Fee")
 
-	apilogger.Println("Sleep 60 sek ")
-	time.Sleep(60 * time.Second)
+	apilogger.Println("Sleep 80 sek ")
+	time.Sleep(80 * time.Second)
 
 	//getMember
 	getMember(t, member1)
@@ -72,6 +72,15 @@ func TestObserverSmoke(t *testing.T) {
 	assertTransactionsContains(transactions1, response, t)
 	transactions2 := getTransactionList(t, member2)
 	assertTransactionsContains(transactions2, response, t)
+}
+
+func TestTransactionListWithEmptyReference(t *testing.T) {
+	txId := " ?direction=all&limit=10"
+	apilogger.LogApiRequest("get /api/transactionList", nil, nil)
+	apilogger.Println("txId = " + txId)
+	response, http, _ := observerapi.GetObserverClient().ObserverApi.TransactionList(nil, txId)
+	apilogger.LogApiResponse(http, response)
+	require.Equal(t, "204 No Content", http.Status) //bug fixed https://insolar.atlassian.net/browse/WLT-853
 }
 
 func getTransactionList(t *testing.T, member insolarapi.MemberObject) []insolar_observer_api.InlineResponse200 {
