@@ -85,9 +85,13 @@ func DefaultLightResponse(pl payload.Payload) []payload.Payload {
 	// getters
 	case *payload.GetFilament, *payload.GetCode, *payload.GetRequest, *payload.GetRequestInfo:
 		return nil
+	case *payload.SetIncomingRequest, *payload.SetOutgoingRequest:
+		return []payload.Payload{&payload.RequestInfo{}}
 	// setters
-	case *payload.SetResult, *payload.SetCode, *payload.SetIncomingRequest, *payload.SetOutgoingRequest:
-		return nil
+	case *payload.SetResult, *payload.SetCode:
+		return []payload.Payload{&payload.ID{}}
+	case *payload.HasPendings:
+		return []payload.Payload{&payload.PendingsInfo{HasPendings: true}}
 	}
 
 	panic(fmt.Sprintf("unexpected message to lightt %T", pl))
@@ -141,14 +145,14 @@ func NewServer(
 		NodeNetwork network.NodeNetwork
 	)
 	{
-		NodeNetwork = newNodeNetMock(&light)
+		NodeNetwork = newNodeNetMock(&virtual)
 	}
 
 	// Role calculations.
 	var (
-		Coordinator jet.Coordinator
+		Coordinator *jetcoordinator.Coordinator
 		Pulses      *pulse.StorageMem
-		Jets        jet.Storage
+		Jets        *jet.Store
 		Nodes       *node.Storage
 	)
 	{
@@ -156,15 +160,13 @@ func NewServer(
 		Pulses = pulse.NewStorageMem()
 		Jets = jet.NewStore()
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
-		c.PulseCalculator = Pulses
-		c.PulseAccessor = Pulses
-		c.JetAccessor = Jets
-		c.OriginProvider = NodeNetwork
-		c.PlatformCryptographyScheme = CryptoScheme
-		c.Nodes = Nodes
-
-		Coordinator = c
+		Coordinator = jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+		Coordinator.PulseCalculator = Pulses
+		Coordinator.PulseAccessor = Pulses
+		Coordinator.JetAccessor = Jets
+		Coordinator.OriginProvider = NodeNetwork
+		Coordinator.PlatformCryptographyScheme = CryptoScheme
+		Coordinator.Nodes = Nodes
 	}
 
 	// PulseManager
@@ -183,8 +185,9 @@ func NewServer(
 		ExternalPubSub, IncomingPubSub *gochannel.GoChannel
 	)
 	{
-		ExternalPubSub = gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
-		IncomingPubSub = gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
+		pubsub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
+		ExternalPubSub = pubsub
+		IncomingPubSub = pubsub
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
 		c.PulseCalculator = Pulses
@@ -210,39 +213,27 @@ func NewServer(
 	// TODO: remove this hack in INS-3341
 	contractRequester.LR = logicRunner
 
-	pm := pulsemanager.NewPulseManager()
-
-	cm.Register(
-		CryptoScheme,
+	cm.Inject(CryptoScheme,
 		KeyStore,
 		CryptoService,
 		KeyProcessor,
+		Coordinator,
 		logicRunner,
-		logicexecutor.NewLogicExecutor(),
-		logicrunner.NewRequestsExecutor(),
-		machinesmanager.NewMachinesManager(),
-		NodeNetwork,
-		pm,
-		PulseManager,
-	)
 
-	components := []interface{}{
 		ClientBus,
 		IncomingPubSub,
 		contractRequester,
 		artifacts.NewClient(ClientBus),
 		artifacts.NewDescriptorsCache(),
-		Coordinator,
 		Pulses,
-		jet.NewStore(),
-		node.NewStorage(),
-	}
-	components = append(components, []interface{}{
-		CryptoService,
-		KeyProcessor,
-	}...)
+		Jets,
+		Nodes,
 
-	cm.Inject(components...)
+		logicexecutor.NewLogicExecutor(),
+		logicrunner.NewRequestsExecutor(),
+		machinesmanager.NewMachinesManager(),
+		NodeNetwork,
+		PulseManager)
 
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
@@ -324,8 +315,6 @@ func NewServer(
 func (s *Server) Stop(ctx context.Context) {
 	panicIfErr(s.componentManager.Stop(ctx))
 	s.stopper()
-	panicIfErr(s.ExternalPubSub.Close())
-	panicIfErr(s.IncomingPubSub.Close())
 }
 
 func (s *Server) SetPulse(ctx context.Context) {
@@ -346,7 +335,6 @@ func (s *Server) SendToSelf(ctx context.Context, pl payload.Payload) (<-chan *me
 	if err != nil {
 		panic(err)
 	}
-	inslogger.FromContext(ctx).Info(msg)
 	return s.clientSender.SendTarget(ctx, msg, virtual.ID())
 }
 

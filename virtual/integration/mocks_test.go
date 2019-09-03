@@ -19,12 +19,10 @@ package integration
 import (
 	"context"
 	"crypto"
-	"crypto/rand"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/network"
 	networknode "github.com/insolar/insolar/network/node"
 )
@@ -117,41 +115,6 @@ func SendMessage(
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
 	checkError(ctx, err, "unmarshal payload")
 	return pl
-}
-
-func MakeSetIncomingRequest(
-	objectID insolar.ID,
-	reasonID insolar.ID,
-	reasonObjectID insolar.ID,
-	noWait bool,
-	isAPI bool,
-) (payload.SetIncomingRequest, record.Virtual) {
-	args := make([]byte, 100)
-	_, err := rand.Read(args)
-	panicIfErr(err)
-
-	req := record.IncomingRequest{
-		Arguments: args,
-		Reason:    *insolar.NewReference(reasonID),
-	}
-
-	if noWait {
-		req.ReturnMode = record.ReturnNoWait
-	} else {
-		req.Object = insolar.NewReference(objectID)
-	}
-
-	if isAPI {
-		req.APINode = gen.Reference()
-	} else {
-		req.Caller = *insolar.NewReference(reasonObjectID)
-	}
-
-	rec := record.Wrap(&req)
-	pl := payload.SetIncomingRequest{
-		Request: rec,
-	}
-	return pl, rec
 }
 
 func panicIfErr(err error) {
