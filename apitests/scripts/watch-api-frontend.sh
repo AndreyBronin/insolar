@@ -1,7 +1,7 @@
 #!/bin/#!/usr/bin/env bash
 
 WORKDIR=~/go/src/github.com/insolar
-REPOS=( "insolar-api" "insolar-observer-api" "insolar-internal-api" )
+REPOS=( "insolar-api" "insolar-internal-api" "insolar-observer-api" )
 PORTS=( "8080" "8081" "8082" )
 CURENT_DIR=$(pwd)
 
